@@ -237,91 +237,181 @@ const bucketTime = (t: number, interval: number): number =>
 
 type ExportField = keyof ExportLiveData;
 
+type AggregationStrategy = 'first' | 'last' | 'mean' | 'min' | 'max';
+
+type AggState = {
+  first?: number;
+  last?: number;
+  min?: number;
+  max?: number;
+  sum: number;
+  count: number;
+};
+
+type BucketAgg = {
+  start_time: number;
+  fields: Partial<Record<ExportField, AggState>>;
+};
+
+const defaultAggregation: Record<
+  Exclude<ExportField, 'start_time'>,
+  AggregationStrategy
+> = {
+  heart_rate: 'mean',
+  cadence: 'mean',
+  speed: 'mean',
+  distance: 'last',
+  calorie: 'last',
+  percent_of_vo2max: 'mean',
+  altitude: 'mean',
+  latitude: 'mean',
+  longitude: 'mean',
+  accuracy: 'mean',
+};
+
+const ensureAggState = (bucket: BucketAgg, field: ExportField): AggState => {
+  const existing = bucket.fields[field];
+  if (existing) return existing;
+
+  const created: AggState = { sum: 0, count: 0 };
+  bucket.fields[field] = created;
+
+  return created;
+};
+
+const pushAggValue = (bucket: BucketAgg, field: ExportField, value: number) => {
+  const s = ensureAggState(bucket, field);
+  if (s.first === undefined) s.first = value;
+  s.last = value;
+  s.min = s.min === undefined ? value : Math.min(s.min, value);
+  s.max = s.max === undefined ? value : Math.max(s.max, value);
+  s.sum += value;
+  s.count += 1;
+};
+
+const getAggValue = (
+  state: AggState | undefined,
+  strategy: AggregationStrategy,
+): number | undefined => {
+  if (!state || state.count === 0) return undefined;
+
+  switch (strategy) {
+    case 'first':
+      return state.first;
+    case 'last':
+      return state.last;
+    case 'min':
+      return state.min;
+    case 'max':
+      return state.max;
+    case 'mean':
+      return state.sum / state.count;
+    default: {
+      const _exhaustiveCheck: never = strategy;
+      return _exhaustiveCheck;
+    }
+  }
+};
+
 function getLiveDataCSV(
   data: Exercise,
   fields: ExportField[] = ['start_time', 'heart_rate', 'cadence', 'speed'],
+  aggregation: Partial<Record<ExportField, AggregationStrategy>> = {},
 ): string {
   const liveData = data['com.samsung.health.exercise.live_data.json'] || [];
   const locData = data['com.samsung.health.exercise.location_data.json'] || [];
 
-  const buckets = new Map<number, ExportLiveData>();
+  const aggConfig: Partial<Record<ExportField, AggregationStrategy>> = {
+    ...defaultAggregation,
+    ...aggregation,
+  };
+
+  const buckets = new Map<number, BucketAgg>();
+
+  const getBucket = (t: number): BucketAgg => {
+    const existing = buckets.get(t);
+    if (existing) {
+      return existing;
+    }
+
+    const created: BucketAgg = { start_time: t, fields: {} };
+    buckets.set(t, created);
+
+    return created;
+  };
 
   liveData.forEach((d) => {
     if ('heart_rate' in d) {
       const t = bucketTime(d.start_time, INTERVAL_HR);
-      const b = buckets.get(t) ?? { start_time: t };
-      b.heart_rate = d.heart_rate;
-      buckets.set(t, b);
+      const b = getBucket(t);
+      pushAggValue(b, 'heart_rate', d.heart_rate);
     }
 
     if ('cadence' in d) {
       const t = bucketTime(d.start_time, INTERVAL_RUN);
-      const b = buckets.get(t) ?? { start_time: t };
-      b.cadence = d.cadence;
-      b.calorie = d.calorie;
-      b.distance = d.distance;
-      b.speed = d.speed;
-      buckets.set(t, b);
+      const b = getBucket(t);
+      pushAggValue(b, 'cadence', d.cadence);
+      pushAggValue(b, 'calorie', d.calorie);
+      pushAggValue(b, 'distance', d.distance);
+      pushAggValue(b, 'speed', d.speed);
     }
 
     if ('percent_of_vo2max' in d) {
       const t = bucketTime(d.start_time, INTERVAL_VO2MAX);
-      const b = buckets.get(t) ?? { start_time: t };
-      b.percent_of_vo2max = d.percent_of_vo2max;
-      buckets.set(t, b);
+      const b = getBucket(t);
+      pushAggValue(b, 'percent_of_vo2max', d.percent_of_vo2max);
     }
 
     if ('distance' in d && !('cadence' in d)) {
       const t = bucketTime(d.start_time, INTERVAL_DISTANCE);
-      const b = buckets.get(t) ?? { start_time: t };
-      b.distance = d.distance;
-      buckets.set(t, b);
+      const b = getBucket(t);
+      pushAggValue(b, 'distance', d.distance);
     }
   });
 
   locData.forEach((d) => {
     const t = bucketTime(d.start_time, INTERVAL_LOC);
-    const b = buckets.get(t) ?? { start_time: t };
-    b.accuracy = d.accuracy;
-    b.altitude = d.altitude;
-    b.latitude = d.latitude;
-    b.longitude = d.longitude;
-    buckets.set(t, b);
+    const b = getBucket(t);
+    pushAggValue(b, 'accuracy', d.accuracy);
+    pushAggValue(b, 'altitude', d.altitude);
+    pushAggValue(b, 'latitude', d.latitude);
+    pushAggValue(b, 'longitude', d.longitude);
   });
 
-  const sortedData = [...buckets.values()].sort(
+  const sortedBuckets = [...buckets.values()].sort(
     (a, b) => a.start_time - b.start_time,
   );
 
   const lines = [fields.join(',')];
 
-  sortedData.forEach((d) => {
+  sortedBuckets.forEach((bucket) => {
     const row = fields.map((f): number | string => {
-      const v = d[f];
+      if (f === 'start_time') {
+        return Math.round(
+          (bucket.start_time - sortedBuckets[0].start_time) / 1000,
+        );
+      }
+
+      const strategy: AggregationStrategy = aggConfig[f] ?? 'mean';
+      const v = getAggValue(bucket.fields[f], strategy);
       if (v === undefined) {
         return '';
       }
 
       switch (f) {
-        case 'start_time':
-          return Math.round((v - sortedData[0].start_time) / 1000);
-        case 'altitude':
-        case 'latitude':
-        case 'longitude':
-          return round(v, 2);
-        case 'heart_rate':
-          return v;
+        case 'accuracy':
         case 'cadence':
+        case 'calorie':
+        case 'heart_rate':
           return round(v);
-        case 'speed':
-          return round(v, 2);
         case 'percent_of_vo2max':
           return round(v, 1);
+        case 'altitude':
         case 'distance':
+        case 'latitude':
+        case 'longitude':
+        case 'speed':
           return round(v, 2);
-        case 'calorie':
-        case 'accuracy':
-          return v;
         default: {
           const _exhaustiveCheck: never = f;
           return _exhaustiveCheck;
