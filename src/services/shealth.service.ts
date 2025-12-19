@@ -93,11 +93,11 @@ export class SHealthService {
   private exercisesDir = path.join('jsons', 'com.samsung.shealth.exercise');
 
   /**
-   * @param inputDir          The directory path of the samsung health export
-   * @param outputDir         The output directory
-   * @param lastExerciseOnly  Allow to export all exercises or the last exercise
+   * @param inputDir      The directory path of the samsung health export
+   * @param outputDir     The output directory
+   * @param lastExercises Allow to specify the number of exercises to export
    */
-  async run(inputDir: string, outputDir: string, lastExerciseOnly = true) {
+  async run(inputDir: string, outputDir: string, lastExercises: number) {
     const data = await this.loadExercises(inputDir);
 
     await fs.mkdir(outputDir, { recursive: true });
@@ -113,9 +113,9 @@ export class SHealthService {
       | ReadonlyArray<CompressedWorkout>
       | CompressedWorkout = data.map((d) => d.compressedWorkout);
 
-    if (lastExerciseOnly) {
-      exercises = exercises[exercises.length - 1];
-      compressedExercises = compressedExercises[compressedExercises.length - 1];
+    if (lastExercises > 0) {
+      exercises = exercises.slice(-lastExercises);
+      compressedExercises = compressedExercises.slice(-lastExercises);
     }
 
     await fs.writeFile(filePath, JSON.stringify(exercises, null, 2), {

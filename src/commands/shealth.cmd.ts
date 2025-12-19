@@ -11,7 +11,7 @@ const COMMAND_NAME = 'shealth-exporter';
 type CommandOptions = {
   input: string;
   output: string;
-  lastExerciseOnly?: boolean;
+  lastExercises: number;
 };
 
 @RootCommand({
@@ -34,7 +34,7 @@ class SamsungHealthCommand extends CommandRunner {
       return await this.shealthService.run(
         options.input,
         options.output,
-        !!options.lastExerciseOnly,
+        options.lastExercises,
       );
     } catch (err) {
       console.log(err instanceof Error ? err.message : err);
@@ -60,13 +60,13 @@ class SamsungHealthCommand extends CommandRunner {
   }
 
   @Option({
-    flags: '--lastExerciseOnly [lastExerciseOnly]',
-    description: 'Export the last exercise only (default=true)',
+    flags: '--lastExercises [lastExercises]',
+    description: 'Export the last exercises (default=10)',
     required: false,
-    defaultValue: true,
+    defaultValue: -1,
   })
-  parseLastExerciseOnly(val: string): boolean {
-    return this.util.parseBoolean(val);
+  parseLastExercises(val: string): number {
+    return this.util.parseInt(val) || -1;
   }
 }
 
