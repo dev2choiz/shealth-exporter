@@ -174,7 +174,7 @@ export type Exercise = {
   'sensing_status.json': SensingStatus;
 };
 
-export type ExportLiveData = WithRequired<
+type ExportLiveData = WithRequired<
   Partial<
     Pick<
       MergeUnion<LiveData>,
@@ -191,6 +191,8 @@ export type ExportLiveData = WithRequired<
   'start_time'
 >;
 
+export type ExportField = keyof ExportLiveData;
+
 export type CompressedWorkout = {
   start_time: string;
   end_time: string;
@@ -206,5 +208,7 @@ export type CompressedWorkout = {
   max_cadence: number;
   altitude_gain: number;
   altitude_loss: number;
+  vo2_max: number;
+  sweat_loss: number;
   live_data: string;
 };

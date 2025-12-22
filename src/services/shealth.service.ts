@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { CompressedWorkout, Exercise, ExportLiveData, Workout } from '../types';
+import { CompressedWorkout, Exercise, ExportField, Workout } from '../types';
 
 const round = (n: number, decimal = 0) =>
   Math.round(n * 10 ** decimal) / 10 ** decimal;
@@ -16,22 +16,26 @@ const readJSON = async <T>(filePath: string) =>
 
 const readCSV = async <T extends Record<string, any> = Record<string, any>>(
   filePath: string,
-  lineStart: number = 0,
+  headerLine: number,
+  lastExercises: number,
 ) => {
   const content = await readFile(filePath);
   const lines = content.split(/\r?\n/).filter((line) => line.trim() !== '');
 
-  if (lines.length <= lineStart) return [];
+  if (lines.length <= headerLine) return [];
 
-  const csv = lines.slice(lineStart).join('\n');
+  const header = lines[headerLine];
 
-  return parseCSVToRecords<T>(csv);
+  const dataLines = lines.slice(headerLine + 1);
+  const selected =
+    lastExercises > 0 ? dataLines.slice(-lastExercises) : dataLines;
+
+  return parseToRecords<T>([header, ...selected]);
 };
 
-const parseCSVToRecords = <T extends Record<string, any> = Record<string, any>>(
-  csv: string,
+const parseToRecords = <T extends Record<string, any> = Record<string, any>>(
+  lines: ReadonlyArray<string>,
 ): ReadonlyArray<T> => {
-  const lines = csv.split(/\r?\n/).filter((line) => line.trim() !== '');
   if (lines.length === 0) return [];
 
   const headers = lines[0].split(',');
@@ -49,6 +53,7 @@ const parseCSVToRecords = <T extends Record<string, any> = Record<string, any>>(
 
 const findExerciseCSV = async (
   folderPath: string,
+  lastExercises: number,
 ): Promise<ReadonlyArray<Workout>> => {
   try {
     const stats = await fs.stat(folderPath);
@@ -80,7 +85,11 @@ const findExerciseCSV = async (
   }
 
   try {
-    return await readCSV<Workout>(path.join(folderPath, csvFile), 1);
+    return await readCSV<Workout>(
+      path.join(folderPath, csvFile),
+      1,
+      lastExercises,
+    );
   } catch (err) {
     throw new Error(
       `Failed to read CSV file ${csvFile}: ${err instanceof Error ? err.message : err}`,
@@ -98,7 +107,7 @@ export class SHealthService {
    * @param lastExercises Allow to specify the number of exercises to export
    */
   async run(inputDir: string, outputDir: string, lastExercises: number) {
-    const data = await this.loadExercises(inputDir);
+    const data = await this.loadExercises(inputDir, lastExercises);
 
     await fs.mkdir(outputDir, { recursive: true });
 
@@ -108,15 +117,10 @@ export class SHealthService {
       'compressed_exercises.json',
     );
 
-    let exercises: ReadonlyArray<Exercise> | Exercise = data;
-    let compressedExercises:
-      | ReadonlyArray<CompressedWorkout>
-      | CompressedWorkout = data.map((d) => d.compressedWorkout);
-
-    if (lastExercises > 0) {
-      exercises = exercises.slice(-lastExercises);
-      compressedExercises = compressedExercises.slice(-lastExercises);
-    }
+    const exercises: ReadonlyArray<Exercise> = data;
+    const compressedExercises: ReadonlyArray<CompressedWorkout> = data.map(
+      (d) => d.compressedWorkout,
+    );
 
     await fs.writeFile(filePath, JSON.stringify(exercises, null, 2), {
       encoding: 'utf-8',
@@ -131,11 +135,14 @@ export class SHealthService {
     console.log(`${compressedFilePath} generated`);
   }
 
-  private async loadExercises(dir: string): Promise<ReadonlyArray<Exercise>> {
+  private async loadExercises(
+    dir: string,
+    lastExercises: number,
+  ): Promise<ReadonlyArray<Exercise>> {
     const exercises: Record<string, Exercise> = {};
     const rootDir = path.join(dir, this.exercisesDir);
 
-    const allData = await findExerciseCSV(dir);
+    const allData = await findExerciseCSV(dir, lastExercises);
 
     allData.forEach((data) => {
       const uuid = data['com.samsung.health.exercise.datauuid'];
@@ -158,7 +165,6 @@ export class SHealthService {
         for (const file of files) {
           const id = file.substring(0, 36);
           if (!exercises[id]) {
-            console.log(`${file} ignored because not linked with a workout`);
             continue;
           }
 
@@ -184,9 +190,7 @@ export class SHealthService {
         distance: Number(
           exercises[id].workout['com.samsung.health.exercise.distance'],
         ),
-        calories: Number(
-          exercises[id].workout['com.samsung.health.exercise.calorie'],
-        ),
+        calories: Number(exercises[id].workout['total_calorie']),
         mean_hr: Number(
           exercises[id].workout['com.samsung.health.exercise.mean_heart_rate'],
         ),
@@ -214,6 +218,12 @@ export class SHealthService {
         altitude_loss: Number(
           exercises[id].workout['com.samsung.health.exercise.altitude_loss'],
         ),
+        vo2_max: Number(
+          exercises[id].workout['com.samsung.health.exercise.vo2_max'],
+        ),
+        sweat_loss: Number(
+          exercises[id].workout['com.samsung.health.exercise.sweat_loss'],
+        ),
         live_data: getLiveDataCSV(exercises[id]),
       };
     });
@@ -232,10 +242,15 @@ const INTERVAL_LOC = 10_000;
 const INTERVAL_VO2MAX = 30_000;
 const INTERVAL_DISTANCE = 30_000;
 
+const defaultExportFields = [
+  'start_time',
+  'heart_rate',
+  'cadence',
+  'speed',
+] satisfies ReadonlyArray<ExportField>;
+
 const bucketTime = (t: number, interval: number): number =>
   Math.floor(t / interval) * interval;
-
-type ExportField = keyof ExportLiveData;
 
 type AggregationStrategy = 'first' | 'last' | 'mean' | 'min' | 'max';
 
@@ -315,7 +330,7 @@ const getAggValue = (
 
 function getLiveDataCSV(
   data: Exercise,
-  fields: ExportField[] = ['start_time', 'heart_rate', 'cadence', 'speed'],
+  fields: ExportField[] = defaultExportFields,
   aggregation: Partial<Record<ExportField, AggregationStrategy>> = {},
 ): string {
   const liveData = data['com.samsung.health.exercise.live_data.json'] || [];
