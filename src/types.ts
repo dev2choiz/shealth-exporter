@@ -165,7 +165,7 @@ export type Exercise = {
   uuid: string;
   start_time: string;
   workout: Workout;
-  compressedWorkout: CompressedWorkout;
+  workoutSummary: WorkoutSummary;
   'additional_internal.json': Array<AdditionalInternal>;
   'com.samsung.health.exercise.live_data.json': Array<LiveData>;
   'com.samsung.health.exercise.location_data.json': Array<LocationData>;
@@ -193,7 +193,7 @@ type ExportLiveData = WithRequired<
 
 export type ExportField = keyof ExportLiveData;
 
-export type CompressedWorkout = {
+export type WorkoutSummary = {
   start_time: string;
   end_time: string;
   duration: number;
