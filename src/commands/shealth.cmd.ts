@@ -11,7 +11,8 @@ const COMMAND_NAME = 'shealth-exporter';
 type CommandOptions = {
   input: string;
   output: string;
-  lastExercises: number;
+  lastExercises?: number;
+  configFile?: string;
 };
 
 @RootCommand({
@@ -26,19 +27,13 @@ class SamsungHealthCommand extends CommandRunner {
     super();
   }
 
-  async run(_: string[], options?: CommandOptions): Promise<void> {
-    if (!options?.input) throw new Error('--input path is required');
-    if (!options?.output) throw new Error('--output path is required');
+  async run(_: string[], options: CommandOptions): Promise<void> {
+    const config = await this.shealthService.getConfig(
+      options.configFile,
+      options.lastExercises,
+    );
 
-    try {
-      return await this.shealthService.run(
-        options.input,
-        options.output,
-        options.lastExercises,
-      );
-    } catch (err) {
-      console.log(err instanceof Error ? err.message : err);
-    }
+    return await this.shealthService.run(options.input, options.output, config);
   }
 
   @Option({
@@ -60,13 +55,21 @@ class SamsungHealthCommand extends CommandRunner {
   }
 
   @Option({
-    flags: '--lastExercises [lastExercises]',
-    description: 'Export the last exercises (default=10)',
+    flags: '--last-exercises [lastExercises]',
+    description: 'Export the last exercises',
     required: false,
-    defaultValue: -1,
   })
   parseLastExercises(val: string): number {
-    return this.util.parseInt(val) || -1;
+    return this.util.parseInt(val);
+  }
+
+  @Option({
+    flags: '--config-file [configFile]',
+    description: 'A yaml file with the config',
+    required: false,
+  })
+  parseConfigFile(val: string): string {
+    return val;
   }
 }
 

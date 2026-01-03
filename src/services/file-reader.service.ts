@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { parse } from 'yaml';
 
 @Injectable()
 export class FileReaderService {
@@ -51,8 +52,12 @@ export class FileReaderService {
     }
   }
 
-  private readFile(filePath: string) {
+  readFile(filePath: string) {
     return fs.readFile(filePath, { encoding: 'utf-8' });
+  }
+
+  async readYAML<T>(filePath: string) {
+    return parse(await this.readFile(filePath)) as T | undefined;
   }
 
   async readJSON<T>(filePath: string) {

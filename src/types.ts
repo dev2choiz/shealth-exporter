@@ -212,3 +212,30 @@ export type WorkoutSummary = {
   sweat_loss: number;
   live_data: string;
 };
+
+export type AggregationStrategy = 'first' | 'last' | 'mean' | 'min' | 'max';
+
+export type AggregationStrategyConfig = Record<
+  Exclude<ExportField, 'start_time'>,
+  AggregationStrategy
+>;
+
+export type Config = {
+  liveData: {
+    intervalHeartRate: number;
+    intervalRun: number;
+    intervalLocation: number;
+    intervalVo2max: number;
+    intervalDistance: number;
+    exportFields: ReadonlyArray<ExportField>;
+    aggregationStrategy: Record<
+      Exclude<ExportField, 'start_time'>,
+      AggregationStrategy
+    >;
+  };
+  lastExercises: number;
+};
+
+export type ConfigFile = Partial<Config> & {
+  liveData?: Partial<Config['liveData']>;
+};

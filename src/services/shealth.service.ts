@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { WorkoutSummary, Exercise, Workout } from '../types';
+import type {
+  WorkoutSummary,
+  Exercise,
+  Workout,
+  Config,
+  ConfigFile,
+} from '../types';
 import { LiveDataService } from './live-data.service';
 import { FileReaderService } from './file-reader.service';
 
@@ -17,10 +23,10 @@ export class SHealthService {
   /**
    * @param inputDir      The directory path of the samsung health export
    * @param outputDir     The output directory
-   * @param lastExercises Allow to specify the number of exercises to export
+   * @param config        The configuration of the export
    */
-  async run(inputDir: string, outputDir: string, lastExercises: number) {
-    const data = await this.loadExercises(inputDir, lastExercises);
+  async run(inputDir: string, outputDir: string, config: Config) {
+    const data = await this.loadExercises(inputDir, config);
 
     await fs.mkdir(outputDir, { recursive: true });
 
@@ -47,14 +53,14 @@ export class SHealthService {
 
   private async loadExercises(
     dir: string,
-    lastExercises: number,
+    config: Config,
   ): Promise<ReadonlyArray<Exercise>> {
     const exercises: Record<string, Exercise> = {};
     const rootDir = path.join(dir, this.exercisesDir);
 
     const allData = await this.fileReaderSvc.findExerciseCSV<Workout>(
       dir,
-      lastExercises,
+      config.lastExercises,
     );
 
     allData.forEach((data) => {
@@ -95,7 +101,10 @@ export class SHealthService {
     }
 
     Object.keys(exercises).forEach((id) => {
-      exercises[id].workoutSummary = this.getWorkoutSummary(exercises[id]);
+      exercises[id].workoutSummary = this.getWorkoutSummary(
+        exercises[id],
+        config,
+      );
     });
 
     return Object.values(exercises).sort(
@@ -105,7 +114,7 @@ export class SHealthService {
     );
   }
 
-  private getWorkoutSummary(exercise: Exercise) {
+  private getWorkoutSummary(exercise: Exercise, conf: Config) {
     return {
       start_time: exercise.workout['com.samsung.health.exercise.start_time'],
       end_time: exercise.workout['com.samsung.health.exercise.end_time'],
@@ -147,7 +156,46 @@ export class SHealthService {
       sweat_loss: Number(
         exercise.workout['com.samsung.health.exercise.sweat_loss'],
       ),
-      live_data: this.liveDataSvc.get(exercise),
+      live_data: this.liveDataSvc.get(exercise, conf),
+    };
+  }
+
+  async getConfig(
+    path: string | undefined,
+    lastExercises: number | undefined,
+  ): Promise<Config> {
+    const defaultConfig = {
+      liveData: this.liveDataSvc.getDefaultConfig(),
+      lastExercises: -1,
+    };
+
+    let configFile: ConfigFile | undefined;
+
+    if (path) {
+      configFile = await this.fileReaderSvc.readYAML<ConfigFile>(path);
+    }
+
+    if (!configFile) {
+      return {
+        ...defaultConfig,
+        lastExercises: lastExercises ?? defaultConfig.lastExercises,
+      };
+    }
+
+    return {
+      ...defaultConfig,
+      liveData: {
+        ...defaultConfig.liveData,
+        ...(configFile.liveData || {}),
+        aggregationStrategy: {
+          ...defaultConfig.liveData.aggregationStrategy,
+          ...configFile.liveData?.aggregationStrategy,
+        },
+      },
+      lastExercises:
+        lastExercises ??
+        configFile?.lastExercises ??
+        defaultConfig.lastExercises,
     };
   }
 }

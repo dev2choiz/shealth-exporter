@@ -1,7 +1,11 @@
-import { Exercise, ExportField } from '../types';
+import type {
+  AggregationStrategy,
+  AggregationStrategyConfig,
+  Config,
+  Exercise,
+  ExportField,
+} from '../types';
 import { Injectable } from '@nestjs/common';
-
-type AggregationStrategy = 'first' | 'last' | 'mean' | 'min' | 'max';
 
 type AggState = {
   first?: number;
@@ -17,11 +21,11 @@ type BucketAgg = {
   fields: Partial<Record<ExportField, AggState>>;
 };
 
-const INTERVAL_HR = 5_000;
-const INTERVAL_RUN = 10_000;
-const INTERVAL_LOC = 10_000;
-const INTERVAL_VO2MAX = 30_000;
-const INTERVAL_DISTANCE = 30_000;
+const intervalHeartRate = 5_000;
+const intervalRun = 10_000;
+const intervalLocation = 10_000;
+const intervalVo2max = 30_000;
+const intervalDistance = 30_000;
 
 const defaultExportFields = [
   'start_time',
@@ -30,10 +34,7 @@ const defaultExportFields = [
   'speed',
 ] satisfies ReadonlyArray<ExportField>;
 
-const defaultAggregation: Record<
-  Exclude<ExportField, 'start_time'>,
-  AggregationStrategy
-> = {
+const defaultAggregation = {
   heart_rate: 'mean',
   cadence: 'mean',
   speed: 'mean',
@@ -44,34 +45,25 @@ const defaultAggregation: Record<
   latitude: 'mean',
   longitude: 'mean',
   accuracy: 'mean',
-};
+} satisfies AggregationStrategyConfig;
 
 @Injectable()
 export class LiveDataService {
-  get(
-    data: Exercise,
-    fields: ExportField[] = defaultExportFields,
-    aggregation: Partial<Record<ExportField, AggregationStrategy>> = {},
-  ) {
+  get(data: Exercise, conf: Config) {
     const liveData = data['com.samsung.health.exercise.live_data.json'] || [];
     const locData =
       data['com.samsung.health.exercise.location_data.json'] || [];
-
-    const aggConfig: Partial<Record<ExportField, AggregationStrategy>> = {
-      ...defaultAggregation,
-      ...aggregation,
-    };
 
     const buckets = new Map<number, BucketAgg>();
 
     liveData.forEach((d) => {
       if ('heart_rate' in d) {
-        const b = getBucket(buckets, d.start_time, INTERVAL_HR);
+        const b = getBucket(buckets, d.start_time, conf.liveData.intervalRun);
         pushAggValue(b, 'heart_rate', d.heart_rate);
       }
 
       if ('cadence' in d) {
-        const b = getBucket(buckets, d.start_time, INTERVAL_RUN);
+        const b = getBucket(buckets, d.start_time, conf.liveData.intervalRun);
         pushAggValue(b, 'cadence', d.cadence);
         pushAggValue(b, 'calorie', d.calorie);
         pushAggValue(b, 'distance', d.distance);
@@ -79,18 +71,30 @@ export class LiveDataService {
       }
 
       if ('percent_of_vo2max' in d) {
-        const b = getBucket(buckets, d.start_time, INTERVAL_VO2MAX);
+        const b = getBucket(
+          buckets,
+          d.start_time,
+          conf.liveData.intervalVo2max,
+        );
         pushAggValue(b, 'percent_of_vo2max', d.percent_of_vo2max);
       }
 
       if ('distance' in d && !('cadence' in d)) {
-        const b = getBucket(buckets, d.start_time, INTERVAL_DISTANCE);
+        const b = getBucket(
+          buckets,
+          d.start_time,
+          conf.liveData.intervalDistance,
+        );
         pushAggValue(b, 'distance', d.distance);
       }
     });
 
     locData.forEach((d) => {
-      const b = getBucket(buckets, d.start_time, INTERVAL_LOC);
+      const b = getBucket(
+        buckets,
+        d.start_time,
+        conf.liveData.intervalLocation,
+      );
       pushAggValue(b, 'accuracy', d.accuracy);
       pushAggValue(b, 'altitude', d.altitude);
       pushAggValue(b, 'latitude', d.latitude);
@@ -101,7 +105,19 @@ export class LiveDataService {
       (a, b) => a.start_time - b.start_time,
     );
 
-    return generateCsv(fields, sortedBuckets, aggConfig);
+    return generateCsv(conf, sortedBuckets);
+  }
+
+  getDefaultConfig(): Config['liveData'] {
+    return {
+      intervalHeartRate,
+      intervalRun,
+      intervalLocation,
+      intervalVo2max,
+      intervalDistance,
+      exportFields: defaultExportFields,
+      aggregationStrategy: defaultAggregation,
+    };
   }
 }
 
@@ -173,21 +189,23 @@ const getBucket = (
 };
 
 const generateCsv = (
-  fields: ExportField[],
+  config: Config,
   buckets: ReadonlyArray<BucketAgg>,
-  aggConfig: Partial<Record<ExportField, AggregationStrategy>>,
 ): string => {
   const lines = [
-    fields.map((f) => (f === 'start_time' ? 'time' : f)).join(','),
+    config.liveData.exportFields
+      .map((f) => (f === 'start_time' ? 'time' : f))
+      .join(','),
   ];
 
   buckets.forEach((bucket) => {
-    const row = fields.map((f): number | string => {
+    const row = config.liveData.exportFields.map((f): number | string => {
       if (f === 'start_time') {
         return Math.round((bucket.start_time - buckets[0].start_time) / 1000);
       }
 
-      const strategy: AggregationStrategy = aggConfig[f] ?? 'mean';
+      const strategy: AggregationStrategy =
+        config.liveData.aggregationStrategy[f] ?? 'mean';
       const v = getAggValue(bucket.fields[f], strategy);
       if (v === undefined) {
         return '';
