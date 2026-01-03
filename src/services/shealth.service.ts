@@ -10,6 +10,8 @@ import type {
 } from '../types';
 import { LiveDataService } from './live-data.service';
 import { FileReaderService } from './file-reader.service';
+import { ConfigSchema } from '../zod';
+import { z } from 'zod';
 
 @Injectable()
 export class SHealthService {
@@ -169,32 +171,39 @@ export class SHealthService {
       lastExercises: -1,
     };
 
-    let configFile: ConfigFile | undefined;
+    let configFileRaw: ConfigFile | undefined;
 
     if (path) {
-      configFile = await this.fileReaderSvc.readYAML<ConfigFile>(path);
+      configFileRaw = await this.fileReaderSvc.readYAML<ConfigFile>(path);
     }
 
-    if (!configFile) {
+    if (!configFileRaw) {
       return {
         ...defaultConfig,
         lastExercises: lastExercises ?? defaultConfig.lastExercises,
       };
     }
 
+    const result = ConfigSchema.safeParse(configFileRaw);
+    if (!result.success) {
+      console.error('Invalid config file:');
+      console.error(z.treeifyError(result.error));
+      throw result.error;
+    }
+
     return {
       ...defaultConfig,
       liveData: {
         ...defaultConfig.liveData,
-        ...(configFile.liveData || {}),
+        ...(result.data.liveData || {}),
         aggregationStrategy: {
           ...defaultConfig.liveData.aggregationStrategy,
-          ...configFile.liveData?.aggregationStrategy,
+          ...result.data.liveData?.aggregationStrategy,
         },
       },
       lastExercises:
         lastExercises ??
-        configFile?.lastExercises ??
+        result.data.lastExercises ??
         defaultConfig.lastExercises,
     };
   }

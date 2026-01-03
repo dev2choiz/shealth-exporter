@@ -1,3 +1,7 @@
+import { z } from 'zod';
+import type { ConfigSchema } from './zod';
+import type { aggregationStrategy } from './constants';
+
 type MergeUnion<T> = {
   [K in T extends any ? keyof T : never]: T extends Record<K, infer V>
     ? V
@@ -7,6 +11,14 @@ type MergeUnion<T> = {
 type WithRequired<T, K extends keyof T> = T & {
   [F in K]-?: T[F];
 };
+
+export type AssertTrue<T extends true> = T;
+
+export type TypesEqual<T, U> = [T] extends [U]
+  ? [U] extends [T]
+    ? true
+    : false
+  : false;
 
 type SensingStatus = {
   advanced_metrics: {
@@ -213,29 +225,17 @@ export type WorkoutSummary = {
   live_data: string;
 };
 
-export type AggregationStrategy = 'first' | 'last' | 'mean' | 'min' | 'max';
+export type AggregationStrategy = (typeof aggregationStrategy)[number];
 
 export type AggregationStrategyConfig = Record<
   Exclude<ExportField, 'start_time'>,
   AggregationStrategy
 >;
 
-export type Config = {
-  liveData: {
-    intervalHeartRate: number;
-    intervalRun: number;
-    intervalLocation: number;
-    intervalVo2max: number;
-    intervalDistance: number;
-    exportFields: ReadonlyArray<ExportField>;
-    aggregationStrategy: Record<
-      Exclude<ExportField, 'start_time'>,
-      AggregationStrategy
-    >;
-  };
-  lastExercises: number;
-};
+type DeepRequired<T> = T extends object
+  ? { [K in keyof T]-?: DeepRequired<T[K]> }
+  : T;
 
-export type ConfigFile = Partial<Config> & {
-  liveData?: Partial<Config['liveData']>;
-};
+export type ConfigFile = z.infer<typeof ConfigSchema>;
+
+export type Config = DeepRequired<ConfigFile>;
