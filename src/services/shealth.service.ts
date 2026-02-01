@@ -116,7 +116,7 @@ export class SHealthService {
     );
   }
 
-  private getWorkoutSummary(exercise: Exercise, conf: Config) {
+  private getWorkoutSummary(exercise: Exercise, conf: Config): WorkoutSummary {
     return {
       start_time: exercise.workout['com.samsung.health.exercise.start_time'],
       end_time: exercise.workout['com.samsung.health.exercise.end_time'],

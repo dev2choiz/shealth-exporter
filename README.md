@@ -21,6 +21,14 @@ Run the CLI:
 ```
 npx ts-node src/cli.ts --input=<samsung health export path> --output=./data
 ```
+or
+```
+node \
+    node_modules/ts-node/dist/bin.js \
+    src/cli.ts \
+    --input=<samsung health export path> \
+    --output=./data
+```
 
 The CLI accepts an optional `--config-file` argument that points to a YAML configuration file.
 
