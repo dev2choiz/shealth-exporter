@@ -1,17 +1,17 @@
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import { Injectable } from '@nestjs/common';
-import * as path from 'path';
-import * as fs from 'fs/promises';
+import { z } from 'zod';
 import type {
-  WorkoutSummary,
-  Exercise,
-  Workout,
   Config,
   ConfigFile,
+  Exercise,
+  Workout,
+  WorkoutSummary,
 } from '../types';
-import { LiveDataService } from './live-data.service';
-import { FileReaderService } from './file-reader.service';
 import { ConfigSchema } from '../zod';
-import { z } from 'zod';
+import { FileReaderService } from './file-reader.service';
+import { LiveDataService } from './live-data.service';
 
 @Injectable()
 export class SHealthService {
@@ -126,7 +126,7 @@ export class SHealthService {
       distance: Number(
         exercise.workout['com.samsung.health.exercise.distance'],
       ),
-      calories: Number(exercise.workout['total_calorie']),
+      calories: Number(exercise.workout.total_calorie),
       mean_hr: Number(
         exercise.workout['com.samsung.health.exercise.mean_heart_rate'],
       ),

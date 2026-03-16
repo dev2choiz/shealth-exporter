@@ -1,11 +1,11 @@
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import { Injectable } from '@nestjs/common';
-import * as path from 'path';
-import * as fs from 'fs/promises';
 import { parse } from 'yaml';
 
 @Injectable()
 export class FileReaderService {
-  async findExerciseCSV<T extends Record<string, any>>(
+  async findExerciseCSV<T extends Record<string, unknown>>(
     folderPath: string,
     lastExercises: number,
   ): Promise<ReadonlyArray<T>> {
@@ -64,11 +64,9 @@ export class FileReaderService {
     return JSON.parse(await this.readFile(filePath)) as T;
   }
 
-  private async readCSV<T extends Record<string, any> = Record<string, any>>(
-    filePath: string,
-    headerLine: number,
-    lastExercises: number,
-  ) {
+  private async readCSV<
+    T extends Record<string, unknown> = Record<string, unknown>,
+  >(filePath: string, headerLine: number, lastExercises: number) {
     const content = await this.readFile(filePath);
     const lines = content.split(/\r?\n/).filter((line) => line.trim() !== '');
 
@@ -84,7 +82,9 @@ export class FileReaderService {
   }
 }
 
-const parseToRecords = <T extends Record<string, any> = Record<string, any>>(
+const parseToRecords = <
+  T extends Record<string, unknown> = Record<string, unknown>,
+>(
   lines: ReadonlyArray<string>,
 ): ReadonlyArray<T> => {
   if (lines.length === 0) return [];

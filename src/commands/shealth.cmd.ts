@@ -1,10 +1,10 @@
-import { SHealthService } from '../services/shealth.service';
 import {
   CliUtilityService,
   CommandRunner,
   Option,
   RootCommand,
 } from 'nest-commander';
+import { SHealthService } from '../services/shealth.service';
 
 const COMMAND_NAME = 'shealth-exporter';
 

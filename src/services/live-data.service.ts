@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import type {
   AggregationStrategy,
   AggregationStrategyConfig,
@@ -5,7 +6,6 @@ import type {
   Exercise,
   ExportField,
 } from '../types';
-import { Injectable } from '@nestjs/common';
 
 type AggState = {
   first?: number;

@@ -1,9 +1,9 @@
-import { z } from 'zod';
-import type { ConfigSchema } from './zod';
+import type { z } from 'zod';
 import type { aggregationStrategy } from './constants';
+import type { ConfigSchema } from './zod';
 
 type MergeUnion<T> = {
-  [K in T extends any ? keyof T : never]: T extends Record<K, infer V>
+  [K in T extends unknown ? keyof T : never]: T extends Record<K, infer V>
     ? V
     : never;
 };
@@ -95,7 +95,7 @@ type LocationDataInternal = {
   start_time: number;
 };
 
-type AdditionalInternal = Record<string, any>;
+type AdditionalInternal = Record<string, unknown>;
 
 export type Workout = {
   live_data_internal: string;

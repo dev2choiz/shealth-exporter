@@ -7,8 +7,8 @@ This project is a CLI tool that parses Samsung Health exports and generates JSON
 Clone the repository:
 
 ```
-git clone github.com/dev2choiz/samsung-health-parser
-cd samsung-health-parser
+git clone https://github.com/dev2choiz/shealth-exporter.git
+cd shealth-exporter
 ```
 
 Install dependencies:
@@ -18,10 +18,13 @@ npm install
 ```
 
 Run the CLI:
+
 ```
 npx ts-node src/cli.ts --input=<samsung health export path> --output=./data
 ```
+
 or
+
 ```
 node \
     node_modules/ts-node/dist/bin.js \
@@ -33,6 +36,7 @@ node \
 The CLI accepts an optional `--config-file` argument that points to a YAML configuration file.
 
 Configuration file format:
+
 ```yaml
 lastExercises: 10
 liveData:
@@ -42,19 +46,19 @@ liveData:
   intervalVo2max: 30000 # min: 5000
   intervalDistance: 30000
   exportFields:
-    - 'start_time'
-    - 'heart_rate'
-    - 'cadence'
-    - 'speed'
+    - "start_time"
+    - "heart_rate"
+    - "cadence"
+    - "speed"
   aggregationStrategy:
-    heart_rate: 'mean'
-    cadence: 'mean'
-    speed: 'mean'
-    distance: 'last'
-    calorie: 'last'
-    percent_of_vo2max: 'mean'
-    altitude: 'mean'
-    latitude: 'mean'
-    longitude: 'mean'
-    accuracy: 'mean'
+    heart_rate: "mean"
+    cadence: "mean"
+    speed: "mean"
+    distance: "last"
+    calorie: "last"
+    percent_of_vo2max: "mean"
+    altitude: "mean"
+    latitude: "mean"
+    longitude: "mean"
+    accuracy: "mean"
 ```
