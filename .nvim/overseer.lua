@@ -1,19 +1,19 @@
+---@module 'overseer'
 ---@type overseer.TemplateDefinition[]
 local templates = {
   {
     name = "Export Samsung data",
     builder = function()
-      local root_dir = vim.fn.getcwd()
-      --@type overseer.TaskDefinition
+      ---@type overseer.TaskDefinition
       local task = {
-        cmd = { "node", root_dir .. "/node_modules/ts-node/dist/bin.js" },
+        cmd = { "node", "${workspaceFolder}/node_modules/ts-node/dist/bin.js" },
         args = {
-          root_dir .. "/src/cli.ts",
-          "--input=" .. root_dir .. "/data/samsunghealth",
+          "${workspaceFolder}/src/cli.ts",
+          "--input=${workspaceFolder}/data/samsunghealth",
           "--output=./data",
           "--config-file=./data/config.yml",
         },
-        cwd = root_dir,
+        cwd = "${workspaceFolder}",
 
         components = { { "open_output", direction = "dock", on_start = "always", focus = true }, "default" },
       }

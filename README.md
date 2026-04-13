@@ -39,6 +39,7 @@ Configuration file format:
 
 ```yaml
 lastExercises: 10
+exerciseTypes: [] # possible values: https://developer.samsung.com/health/android/data/api-reference/EXERCISE_TYPE.html
 liveData:
   intervalHeartRate: 5000 # min: 1000
   intervalRun: 5000 # min: 5000

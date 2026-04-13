@@ -8,6 +8,7 @@ export class FileReaderService {
   async findExerciseCSV<T extends Record<string, unknown>>(
     folderPath: string,
     lastExercises: number,
+    filterCb?: (item: T) => boolean,
   ): Promise<ReadonlyArray<T>> {
     try {
       const stats = await fs.stat(folderPath);
@@ -44,6 +45,7 @@ export class FileReaderService {
         path.join(folderPath, csvFile),
         1,
         lastExercises,
+        filterCb,
       );
     } catch (err) {
       throw new Error(
@@ -66,7 +68,12 @@ export class FileReaderService {
 
   private async readCSV<
     T extends Record<string, unknown> = Record<string, unknown>,
-  >(filePath: string, headerLine: number, lastExercises: number) {
+  >(
+    filePath: string,
+    headerLine: number,
+    lastExercises: number,
+    filterCb?: (item: T) => boolean,
+  ) {
     const content = await this.readFile(filePath);
     const lines = content.split(/\r?\n/).filter((line) => line.trim() !== '');
 
@@ -75,10 +82,15 @@ export class FileReaderService {
     const header = lines[headerLine];
 
     const dataLines = lines.slice(headerLine + 1);
-    const selected =
-      lastExercises > 0 ? dataLines.slice(-lastExercises) : dataLines;
 
-    return parseToRecords<T>([header, ...selected]);
+    const parsedLines = parseToRecords<T>([header, ...dataLines]);
+
+    const filteredLines = filterCb ? parsedLines.filter(filterCb) : parsedLines;
+
+    const selected =
+      lastExercises > 0 ? filteredLines.slice(-lastExercises) : filteredLines;
+
+    return selected;
   }
 }
 

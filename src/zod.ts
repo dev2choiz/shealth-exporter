@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { aggregationStrategy, exportFieldArray } from './constants';
+import {
+  aggregationStrategy,
+  exerciseTypes,
+  exportFieldArray,
+} from './constants';
 
 export const ConfigSchema = z
   .object({
@@ -8,7 +12,7 @@ export const ConfigSchema = z
       .int()
       .refine((v) => v === -1 || v >= 1)
       .optional(),
-
+    exerciseTypes: z.array(z.enum(exerciseTypes)).optional(),
     liveData: z
       .object({
         intervalHeartRate: z.number().min(1000).optional(),

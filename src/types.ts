@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { aggregationStrategy } from './constants';
+import type { aggregationStrategy, exerciseTypes } from './constants';
 import type { ConfigSchema } from './zod';
 
 type MergeUnion<T> = {
@@ -131,7 +131,7 @@ export type Workout = {
   'com.samsung.health.exercise.mean_caloricburn_rate': string;
   'com.samsung.health.exercise.location_data': string;
   'com.samsung.health.exercise.start_time': string;
-  'com.samsung.health.exercise.exercise_type': string;
+  'com.samsung.health.exercise.exercise_type': (typeof exerciseTypes)[number];
   'com.samsung.health.exercise.custom': string;
   'com.samsung.health.exercise.max_altitude': string;
   'com.samsung.health.exercise.incline_distance': string;

@@ -63,6 +63,12 @@ export class SHealthService {
     const allData = await this.fileReaderSvc.findExerciseCSV<Workout>(
       dir,
       config.lastExercises,
+      config.exerciseTypes.length
+        ? (v) =>
+            config.exerciseTypes.includes(
+              v['com.samsung.health.exercise.exercise_type'],
+            )
+        : undefined,
     );
 
     allData.forEach((data) => {
@@ -169,7 +175,8 @@ export class SHealthService {
     const defaultConfig = {
       liveData: this.liveDataSvc.getDefaultConfig(),
       lastExercises: -1,
-    };
+      exerciseTypes: [],
+    } as const satisfies Config;
 
     let configFileRaw: ConfigFile | undefined;
 
@@ -205,6 +212,7 @@ export class SHealthService {
         lastExercises ??
         result.data.lastExercises ??
         defaultConfig.lastExercises,
+      exerciseTypes: result.data.exerciseTypes ?? defaultConfig.exerciseTypes,
     };
   }
 }
