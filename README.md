@@ -20,7 +20,7 @@ npm install
 Run the CLI:
 
 ```
-npx ts-node src/cli.ts --input=<samsung health export path> --output=./data
+npx ts-node src/cli.ts shealth-exporter --input=<samsung health export path> --output=./data
 ```
 
 or
@@ -29,6 +29,7 @@ or
 node \
     node_modules/ts-node/dist/bin.js \
     src/cli.ts \
+    shealth-exporter \
     --input=<samsung health export path> \
     --output=./data
 ```

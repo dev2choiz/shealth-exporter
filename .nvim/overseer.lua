@@ -9,6 +9,7 @@ local templates = {
         cmd = { "node", "${workspaceFolder}/node_modules/ts-node/dist/bin.js" },
         args = {
           "${workspaceFolder}/src/cli.ts",
+          "shealth-exporter",
           "--input=${workspaceFolder}/data/samsunghealth",
           "--output=./data",
           "--config-file=./data/config.yml",

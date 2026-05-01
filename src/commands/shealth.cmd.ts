@@ -1,8 +1,8 @@
 import {
   CliUtilityService,
+  Command,
   CommandRunner,
   Option,
-  RootCommand,
 } from 'nest-commander';
 import { SHealthService } from '../services/shealth.service';
 
@@ -15,7 +15,7 @@ type CommandOptions = {
   configFile?: string;
 };
 
-@RootCommand({
+@Command({
   name: COMMAND_NAME,
   description: 'Extract exercises data from Samsung Health export files',
 })
