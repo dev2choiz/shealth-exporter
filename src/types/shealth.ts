@@ -197,5 +197,6 @@ export type WorkoutSummary = {
   altitude_loss: number;
   vo2_max: number;
   sweat_loss: number;
+  comment: string;
   live_data: string;
 };

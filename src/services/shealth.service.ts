@@ -157,6 +157,7 @@ export class SHealthService {
       sweat_loss: Number(
         exercise.workout['com.samsung.health.exercise.sweat_loss'],
       ),
+      comment: exercise.workout['com.samsung.health.exercise.comment'],
       live_data: this.liveDataSvc.get(exercise, conf),
     };
   }
