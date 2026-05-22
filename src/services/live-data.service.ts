@@ -3,9 +3,8 @@ import type {
   AggregationStrategy,
   AggregationStrategyConfig,
   Config,
-  Exercise,
-  ExportField,
 } from '../types';
+import type { Exercise, ExportField } from '../types/shealth';
 
 type AggState = {
   first?: number;

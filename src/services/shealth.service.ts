@@ -1,15 +1,8 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { Injectable } from '@nestjs/common';
-import { z } from 'zod';
-import type {
-  Config,
-  ConfigFile,
-  Exercise,
-  Workout,
-  WorkoutSummary,
-} from '../types';
-import { ConfigSchema } from '../zod';
+import type { Config } from '../types';
+import { Exercise, Workout, WorkoutSummary } from '../types/shealth';
 import { FileReaderService } from './file-reader.service';
 import { LiveDataService } from './live-data.service';
 
@@ -165,54 +158,6 @@ export class SHealthService {
         exercise.workout['com.samsung.health.exercise.sweat_loss'],
       ),
       live_data: this.liveDataSvc.get(exercise, conf),
-    };
-  }
-
-  async getConfig(
-    path: string | undefined,
-    lastExercises: number | undefined,
-  ): Promise<Config> {
-    const defaultConfig = {
-      liveData: this.liveDataSvc.getDefaultConfig(),
-      lastExercises: -1,
-      exerciseTypes: [],
-    } as const satisfies Config;
-
-    let configFileRaw: ConfigFile | undefined;
-
-    if (path) {
-      configFileRaw = await this.fileReaderSvc.readYAML<ConfigFile>(path);
-    }
-
-    if (!configFileRaw) {
-      return {
-        ...defaultConfig,
-        lastExercises: lastExercises ?? defaultConfig.lastExercises,
-      };
-    }
-
-    const result = ConfigSchema.safeParse(configFileRaw);
-    if (!result.success) {
-      console.error('Invalid config file:');
-      console.error(z.treeifyError(result.error));
-      throw result.error;
-    }
-
-    return {
-      ...defaultConfig,
-      liveData: {
-        ...defaultConfig.liveData,
-        ...(result.data.liveData || {}),
-        aggregationStrategy: {
-          ...defaultConfig.liveData.aggregationStrategy,
-          ...result.data.liveData?.aggregationStrategy,
-        },
-      },
-      lastExercises:
-        lastExercises ??
-        result.data.lastExercises ??
-        defaultConfig.lastExercises,
-      exerciseTypes: result.data.exerciseTypes ?? defaultConfig.exerciseTypes,
     };
   }
 }

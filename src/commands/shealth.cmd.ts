@@ -4,6 +4,7 @@ import {
   CommandRunner,
   Option,
 } from 'nest-commander';
+import { ConfigService } from '../services/config.service';
 import { SHealthService } from '../services/shealth.service';
 
 const COMMAND_NAME = 'shealth-exporter';
@@ -22,13 +23,14 @@ type CommandOptions = {
 class SamsungHealthCommand extends CommandRunner {
   constructor(
     protected readonly shealthService: SHealthService,
+    protected readonly configService: ConfigService,
     protected readonly util: CliUtilityService,
   ) {
     super();
   }
 
   async run(_: string[], options: CommandOptions): Promise<void> {
-    const config = await this.shealthService.getConfig(
+    const config = await this.configService.getConfig(
       options.configFile,
       options.lastExercises,
     );

@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { Injectable } from '@nestjs/common';
+import { XMLParser } from 'fast-xml-parser';
 import { parse } from 'yaml';
 
 @Injectable()
@@ -91,6 +92,17 @@ export class FileReaderService {
       lastExercises > 0 ? filteredLines.slice(-lastExercises) : filteredLines;
 
     return selected;
+  }
+
+  async readXML<T>(filename: string) {
+    const xml = await fs.readFile(filename, 'utf-8');
+
+    const parser = new XMLParser({
+      ignoreAttributes: false,
+      processEntities: false,
+    });
+
+    return parser.parse(xml) as T;
   }
 }
 

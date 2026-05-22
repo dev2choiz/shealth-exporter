@@ -1,4 +1,5 @@
-import type { AssertTrue, ExportField, TypesEqual } from './types';
+import type { AssertTrue, TypesEqual } from './types';
+import type { ExportField } from './types/shealth';
 
 // https://developer.samsung.com/health/android/data/api-reference/EXERCISE_TYPE.html
 export const exerciseTypes = [

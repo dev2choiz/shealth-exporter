@@ -1,24 +1,5 @@
-import type { z } from 'zod';
-import type { aggregationStrategy, exerciseTypes } from './constants';
-import type { ConfigSchema } from './zod';
-
-type MergeUnion<T> = {
-  [K in T extends unknown ? keyof T : never]: T extends Record<K, infer V>
-    ? V
-    : never;
-};
-
-type WithRequired<T, K extends keyof T> = T & {
-  [F in K]-?: T[F];
-};
-
-export type AssertTrue<T extends true> = T;
-
-export type TypesEqual<T, U> = [T] extends [U]
-  ? [U] extends [T]
-    ? true
-    : false
-  : false;
+import type { exerciseTypes } from '../constants';
+import { MergeUnion, WithRequired } from '.';
 
 type SensingStatus = {
   advanced_metrics: {
@@ -54,7 +35,6 @@ type SensingStatus = {
     is_valid: boolean;
   };
 };
-
 type LiveData =
   | { heart_rate: number; start_time: number }
   | {
@@ -72,7 +52,6 @@ type LiveData =
       distance: number;
       start_time: number;
     };
-
 type LocationData = {
   accuracy: number;
   altitude: number;
@@ -80,21 +59,18 @@ type LocationData = {
   longitude: number;
   start_time: number;
 };
-
 type DataInternal = {
   elapsed_time: number;
   interval: number;
   segment: number;
   start_time: number;
 };
-
 type LocationDataInternal = {
   elapsed_time: number;
   interval: number;
   segment: number;
   start_time: number;
 };
-
 type AdditionalInternal = Record<string, unknown>;
 
 export type Workout = {
@@ -185,7 +161,6 @@ export type Exercise = {
   'location_data_internal.json': Array<LocationDataInternal>;
   'sensing_status.json': SensingStatus;
 };
-
 type ExportLiveData = WithRequired<
   Partial<
     Pick<
@@ -224,18 +199,3 @@ export type WorkoutSummary = {
   sweat_loss: number;
   live_data: string;
 };
-
-export type AggregationStrategy = (typeof aggregationStrategy)[number];
-
-export type AggregationStrategyConfig = Record<
-  Exclude<ExportField, 'start_time'>,
-  AggregationStrategy
->;
-
-type DeepRequired<T> = T extends object
-  ? { [K in keyof T]-?: DeepRequired<T[K]> }
-  : T;
-
-export type ConfigFile = z.infer<typeof ConfigSchema>;
-
-export type Config = DeepRequired<ConfigFile>;
