@@ -219,9 +219,11 @@ const generateCsv = (
         case 'percent_of_vo2max':
           return round(v, 1);
         case 'altitude':
-        case 'distance':
         case 'latitude':
         case 'longitude':
+          return round(v, 5);
+        case 'distance':
+          return round(v, 5);
         case 'speed':
           return round(v, 2);
         default: {
